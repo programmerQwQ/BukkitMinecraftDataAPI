@@ -5,7 +5,6 @@ from typing import Optional, Tuple, List
 import parse
 from mcdreforged.api.all import *
 
-
 class ServerDataGetter:
 	class QueryTask:
 		def __init__(self):
@@ -23,15 +22,22 @@ class ServerDataGetter:
 			finally:
 				self.querying_amount -= 1
 
-	def __init__(self, server: ServerInterface):
+	def __init__(self, server: ServerInterface, handler: str):
 		self.server = server
+		self.handler = handler
 		self.player_list = self.QueryTask()
 
 	def get_player_list(self, timeout: float) -> Optional[Tuple[int, int, List[str]]]:
 		if self.server.is_on_executor_thread():
 			raise RuntimeError('Cannot invoke get_player_list on the task executor thread')
 		with self.player_list.with_querying():
-			self.server.execute('list')
+			commands = {
+				'vanilla_handler': 'list',
+				'bukkit_handler': 'minecraft:list',
+				'bukkit14_handler': 'minecraft:list'
+			}
+			command = commands.get(self.handler, commands['vanilla_handler'])
+			self.server.execute(command)
 			try:
 				amount, limit, players = self.player_list.result_queue.get(timeout=timeout)
 			except Empty:

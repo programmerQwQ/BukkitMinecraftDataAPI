@@ -14,10 +14,11 @@ class PlayerDataGetter:
 			self.queue = Queue()
 			self.count = 0
 
-	def __init__(self, server: PluginServerInterface):
+	def __init__(self, server: PluginServerInterface, handler: str):
 		self.queue_lock = RLock()
 		self.work_queue: Dict[str, PlayerDataGetter.QueueTask] = {}
 		self.server: PluginServerInterface = server
+		self.handler = handler
 		self.json_parser = MinecraftJsonParser()
 
 	def get_queue_task(self, player: str) -> Optional[QueueTask]:
@@ -35,7 +36,12 @@ class PlayerDataGetter:
 			raise RuntimeError('Cannot invoke get_player_info on the task executor thread')
 		if len(path) >= 1 and not path.startswith(' '):
 			path = ' ' + path
-		command = 'data get entity {}{}'.format(player, path)
+		commands = {
+			'vanilla_handler': 'data get entity {}{}',
+			'bukkit_handler': 'minecraft:data get entity {}{}',
+			'bukkit14_handler': 'minecraft:data get entity {}{}'
+		}
+		command = commands.get(self.handler, commands['vanilla_handler']).format(player, path)
 		task = self.get_or_create_queue_task(player)
 		task.count += 1
 		try:
